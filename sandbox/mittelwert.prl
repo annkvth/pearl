@@ -1,0 +1,52 @@
+! Parameteruebergabe Beispiel: Mittelwert berechnen
+! Inspiriert von Kurseinheit 3.4
+
+MODULE(m_parameter);
+
+SYSTEM;
+  so: StdOut;
+
+PROBLEM;
+  SPC so DATION OUT SYSTEM ALPHIC;
+  DCL stdOut DATION OUT ALPHIC DIM(*,80) FORWARD CREATED(so);
+
+  ! Damit die Prozedur Zugriff auf den Stand der vorangegangen Additionen hat,
+  ! werden die Variablen summe und summanden auf Modulebene deklariert
+  DCL summe FIXED(31) INIT(0);
+  DCL summanden FIXED(31) INIT(0);
+
+  neuerWert: PROC (x INV FIXED);
+    summe := summe + x;
+    summanden := summanden + 1;
+ END;
+
+
+! mal sehen ob das mit CALL funktioniert... 
+/* testmain: TASK MAIN;
+  CALL mwtask;
+END;
+*/
+
+/* Aus einer Reihe von Werten, die hier einfach über eine FOR-Schleife erstellt werden, soll
+der Mittelwert gebildet werden. Dazu wird die Funktion neuerWert aufgerufen, die die
+Summe aktualisiert und die Zahl der Aufrufe inkrementiert. */
+mwtask: TASK MAIN;
+
+  DCL mittelwert FLOAT(52) INIT(0);
+
+  OPEN stdOut;
+  
+  FOR i TO 10 REPEAT
+    neuerWert(i);
+  END;
+  
+  mittelwert := (TOFLOAT summe) / (TOFLOAT summanden);
+  PUT 'Mittelwert der ',summanden,' Zahlen ist: ',mittelwert TO stdOut BY A, F(3), A, E(13,6), SKIP;
+
+  CLOSE stdOut;
+  
+! end of task mittelwertTask
+END;
+
+MODEND;
+

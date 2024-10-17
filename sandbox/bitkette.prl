@@ -1,0 +1,39 @@
+! compilieren mit prl bitkette.prl
+! Beispielprogramm Kurseinheit 2.9
+
+MODULE(m_paritaet);
+
+SYSTEM;
+  so: StdOut; ! Terminal Ausgabe bei OpenPEARL
+  si: StdIn; ! Terminal Eingabe bei OpenPEARL
+
+PROBLEM;
+  SPC so DATION OUT SYSTEM ALPHIC;
+  SPC si DATION IN SYSTEM ALPHIC;
+  DCL stdOut DATION OUT ALPHIC DIM(*,80) FORWARD CREATED (so);
+  DCL stdIn DATION IN ALPHIC DIM(*,80) FORWARD CREATED (si);
+
+paritaet: TASK MAIN;
+  DCL bitkette BIT(8);
+  DCL ergebnis(0:1) CHAR(10) INIT('gerade','ungerade');
+  DCL gesetzteBits FIXED INIT(0);
+
+  OPEN stdOut;
+  OPEN stdIn;
+
+  PUT 'gib Bitkette von Typ BIT(8) binaer ein: ' TO stdOut BY A, SKIP;
+  GET bitkette FROM stdIn BY B(8), SKIP;
+
+  FOR i TO 8 REPEAT
+    IF bitkette.BIT(i) THEN
+      gesetzteBits := gesetzteBits + 1;
+    FIN;
+  END;
+    
+  gesetzteBits := gesetzteBits REM 2;
+  PUT 'Bitkette ', bitkette, 'hat',  ergebnis(gesetzteBits), 'Paritaet' TO stdOut BY A,B(8),(3)(X,A), SKIP;
+
+END;
+
+MODEND;
+

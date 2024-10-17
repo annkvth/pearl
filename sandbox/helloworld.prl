@@ -1,0 +1,32 @@
+! from https://sourceforge.net/p/openpearl/wiki/Tutorial%20-%20Hello%20World/
+
+MODULE(HelloWorld);
+
+! The first section in a module is the optional system-part
+! with the definition of used system elements.
+SYSTEM;
+  stdout: StdOut;
+
+
+! The next part is the problem part which contains the application code
+PROBLEM;
+
+  ! import output DATION with human readable content from the system part
+  SPC stdout DATION OUT SYSTEM ALPHIC;
+
+  ! create a socalled user dation with additional features
+  ! ASV: I had to change the order of STREAM / NOCYCL, the version from the tutorial would not compile :-(
+  DCL so DATION OUT ALPHIC DIM(*,80) FORWARD NOCYCL STREAM CREATED(stdout);
+  !DCL so DATION OUT ALPHIC DIM(*,80) FORWARD STREAM NOCYCL CREATED(stdout);
+  
+  ! define a task with the name helloTask and the feature to start automatically (= MAIN)
+  ! the task code opens the dation (OPEN), send data to the output channel (PUT) and close the dation (CLOSE)
+  ! The END-statement terminates the task implicitly
+  helloTask: TASK MAIN;
+    OPEN so;
+    PUT 'Hello World' TO so BY A, SKIP;
+    CLOSE so;
+  END;
+
+! keyword at the end of the module
+MODEND;
