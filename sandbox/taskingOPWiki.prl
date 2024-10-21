@@ -2,13 +2,11 @@
 /* producer and consumer share a fixed-size buffer used as a queue. 
 The producer’s job is to generate data and put this in the buffer. 
 The consumer’s job is to consume the data from this buffer, one at a time. 
-Because the producer can possibly generate data quicker than the consumer can process a buffer is needed. */
+Because the producer can possibly generate data quicker than the consumer can process a buffer is needed. 
 
-
-The problem must be solved by synchronisation of the p roducer and
-consumer task. Especially it must be assured, that the producer
-doesn't try data in a full buffer and the consumer doesn't try to read
-data from an empty buffer.
+The problem must be solved by synchronisation of the producer and consumer task. 
+Especially it must be assured, that the producer doesn't try data in a full buffer 
+and the consumer doesn't try to read data from an empty buffer. */
 
 MODULE(ConsumerProducer);
 SYSTEM;
