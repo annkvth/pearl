@@ -1,0 +1,99 @@
+/* Erzeuger-Verbraucher-Problem (Aufgabe 1)
+Aufgabenstellung: 
+Erzeuger-Verbraucher-Problem. Ein klassisches Problem der Informatik ist das Erzeuger-Verbraucher-Problem. Hierbei sollen die beteiligten Tasks über eine gemeinsame Datenstruktur kommunizieren. */
+
+
+! ToDo: counter ?! gemeinsam? variable die Erzeuger identifiziert?
+
+MODULE(VerbraucherErzeuger);
+SYSTEM;
+  stdout: StdOut;
+
+PROBLEM;
+  SPC stdout DATION OUT SYSTEM ALPHIC GLOBAL;
+  DCL termout DATION OUT ALPHIC DIM(*, 80) FORWARD STREAM CREATED(stdout);
+  DCL semaTermout SEMA PRESET(1);
+  DCL semaEmpty SEMA PRESET(1);
+  DCL semaFull SEMA PRESET(0);
+  DCL semaWait SEMA PRESET(1);
+
+! Das maximale Fassungsvermögen der Nachrichten-Queue sei auf 8 Einträge beschränkt.
+  DCL MAXQUEUE INV FIXED INIT(8);
+! Pearl-Counter starten bei Eins --> von 1 bis 8 
+  DCL queue(1:MAXQUEUE) FIXED;
+  DCL queueIn FIXED INIT(1);
+  DCL queueOut FIXED INIT(1);  
+  DCL counter FIXED INIT(0);
+
+
+
+erzeuger: TASK PRIO 5;
+! Das Task soll solange pro Sekunde je eine Nachricht in eine Nachrichten-Queue schreiben
+! bis es 10 Nachrichten abgelegt habt
+  TO 10 REPEAT
+     REQUEST semaTermout;
+     OPEN termout;
+     PUT 'Erzeuger queueIn=', queueIn, ': counter=', counter TO termout BY A, F(1), A, F(1), SKIP;
+     CLOSE termout;
+     RELEASE semaTermout;
+
+     REQUEST semaEmpty;
+     REQUEST semaWait;
+     counter := counter + 1;
+     queue(queueIn) := counter;
+
+     queueIn := queueIn + 1;
+     ! Dokumentieren Sie auch ggf. den Verlust einzelner Nachrichten
+     ! aufgrund der Überfüllung der Nachrichtenwarteschlange.
+     IF ( queueIn > MAXQUEUE) THEN
+        queueIn := 1;
+        PUT 'Die Nachrichten-Queue ist voll.' TO termout BY A, SKIP;
+     FIN;
+
+     RELEASE semaWait;
+     RELEASE semaFull;
+     ! jede Sekunde eine Nachricht
+     ! ToDo - ist dann 1 Sekunde warten genau genug?
+     PUT 'Dieses Erzeuger-Task wartet jetzt eine Sekunde..' TO termout BY A, SKIP;
+     AFTER 1 SEC RESUME;  
+  END;
+END;
+
+verbraucher: TASK PRIO 5;
+  DCL item FIXED INIT(0);
+
+  TO 10 REPEAT
+     REQUEST semaTermout;
+     OPEN termout;
+     PUT 'Verbraucher queueOut=', queueOut, ': counter=', counter TO termout BY A, F(1), A, F(1), SKIP;
+     CLOSE termout;
+     RELEASE semaTermout;
+
+     REQUEST semaFull;
+     REQUEST semaWait;
+     item := queue(queueOut);
+     queueOut := queueOut + 1;
+
+     IF ( queueOut > MAXQUEUE) THEN
+        queueOut := 1;
+     FIN;
+
+     RELEASE semaWait;
+     RELEASE semaEmpty;
+  END;
+END;
+
+main: TASK PRIO 1 MAIN;
+! Starten Sie drei gleichartige Erzeugertasks
+   ACTIVATE erzeuger;
+   PUT 'Erster Erzeuger gestartet' TO termout BY A, SKIP;
+   ACTIVATE erzeuger;
+   ACTIVATE erzeuger;
+! Starten Sie eine Verbrauchertasks, welche die Nachrichten alle 1.5 s abruft.
+! Starten Sie eine zweite Verbrauchertasks, welche parallel Nachrichten alle 2s abruft.
+   ACTIVATE verbraucher;   
+   ACTIVATE verbraucher;   
+END;
+
+MODEND;
+
