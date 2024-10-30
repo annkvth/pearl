@@ -1,0 +1,186 @@
+/* Erzeuger-Verbraucher-Problem (Aufgabe 1)
+Aufgabenstellung: 
+Erzeuger-Verbraucher-Problem. Ein klassisches Problem der Informatik ist das Erzeuger-Verbraucher-Problem. Hierbei sollen die beteiligten Tasks über eine gemeinsame Datenstruktur kommunizieren. */
+
+
+! ToDo: counter ?! gemeinsam? variable die Erzeuger identifiziert?
+
+MODULE(VerbraucherErzeuger);
+SYSTEM;
+  sOut: StdOut;
+
+PROBLEM;
+  SPC sOut DATION OUT SYSTEM ALPHIC GLOBAL;
+  DCL stdout DATION OUT ALPHIC DIM(*, 80) FORWARD STREAM CREATED(sOut);
+  DCL semaStdout SEMA PRESET(1);
+  DCL semaFrei SEMA PRESET(1);
+  DCL semaVoll SEMA PRESET(0);
+  DCL semaWarte SEMA PRESET(1);
+
+! Das maximale Fassungsvermögen der Nachrichten-Queue sei auf 8 Einträge beschränkt.
+  DCL MAXQUEUE INV FIXED INIT(8);
+! Pearl-Counter starten bei Eins --> von 1 bis 8 
+  DCL queue(1:MAXQUEUE) FIXED;
+
+  DCL iSchreiben FIXED INIT(1);
+  DCL queueOut FIXED INIT(1);  
+  DCL counter FIXED INIT(0);
+
+! die verschiedenen Wartezeiten
+! jede 1 Sekunden eine Nachricht
+  DCL zeitE DURATION INIT(1.0 SEC);
+! Abruf-Zeiten fuer Verbraucher eins und zwei
+  DCL zeitV1 DURATION INIT(1.5 SEC);
+  DCL zeitV2 DURATION INIT(2.0 SEC);
+
+
+
+! lege Prozedur an, um den Code nicht fuer drei Erzeuger dreimal zu kopieren.
+! der Parameter numE dient dazu, beim Loggen den Erzeuger zu identifizieren
+  erzeuge: PROC(numE FIXED);      
+     REQUEST semaStdout;
+     OPEN stdout;
+     PUT 'Erzeuger Nr. ', numE, ' iSchreiben=', iSchreiben, ': counter=', counter TO stdout BY A, F(1), A, F(1), A, F(1), SKIP;
+     CLOSE stdout;
+     RELEASE semaStdout;
+
+     REQUEST semaFrei;
+     REQUEST semaWarte;
+     counter := counter + 1;
+     queue(iSchreiben) := counter;
+
+     iSchreiben := iSchreiben + 1;
+     ! Dokumentieren Sie auch ggf. den Verlust einzelner Nachrichten
+     ! aufgrund der Überfüllung der Nachrichtenwarteschlange.
+     IF ( iSchreiben > MAXQUEUE) THEN
+        iSchreiben := 1;
+        REQUEST semaStdout;
+        OPEN stdout;
+        PUT 'In Erzeuger ', num, ': die Nachrichten-Queue ist voll.' TO stdout BY A, F(1), A, SKIP;
+        CLOSE stdout;
+        RELEASE semaStdout;
+     FIN;
+
+     RELEASE semaWarte;
+     RELEASE semaVoll;
+  END;
+
+
+! Prozedur zum Verbrauchen von Nachrichten
+! der Parameter numV dient dazu, beim Loggen den Erzeuger zu identifizieren
+  verbrauche: PROC(numV FIXED);      
+     DCL item FIXED INIT(0);
+
+     REQUEST semaStdout;
+     OPEN stdout;
+     PUT 'Verbraucher Nr. ', numV, ' iLesen=', iLesen, ': counter=', counter TO stdout BY A, F(1), A, F(1), A, F(1), SKIP;
+     CLOSE stdout;
+     RELEASE semaStdout;
+
+     REQUEST semaVoll, semaWarte;
+     item := queue(iLesen);
+     iLesen := iLesen + 1;
+
+     IF ( iLesen > MAXQUEUE) THEN
+        iLesen := 1;
+     FIN;
+
+     RELEASE semaWarte, semaFrei;
+
+  END;
+
+
+! Zum Loggen: definiere Prozedur fuer Warte-Output mit
+! Name des aufrufenden Tasks und Wartezeit als Parametern
+! siehe Kurstext: 3.4.4 REF CHAR() als Prozedurparameter
+  loggeWarten: PROC(taskname REF INV CHAR() IDENT, zeit DURATION);
+     REQUEST semaStdout;
+     OPEN stdout;
+     PUT taskname, ' wartet jetzt ', zeit, ' .' TO stdout BY A, A, D(3), A, SKIP;
+     CLOSE stdout;
+     RELEASE semaStdout;   
+  END;
+
+
+! Zum Loggen: definiere Prozedur fuer Start-Output mit
+! Name des gestarteten Tasks als Parameter
+  loggeStart: PROC(taskname REF INV CHAR() IDENT);
+     REQUEST semaStdout;
+     OPEN stdout;
+     PUT taskname, ' wurde gestartet.' TO stdout BY A, A, SKIP;
+     CLOSE stdout;
+     RELEASE semaStdout;   
+  END;
+
+
+
+!  ------- Die Erzeuger-Tasks -------
+! Ein Erzeuger-Task soll solange pro Sekunde je eine Nachricht in eine Nachrichten-Queue schreiben
+! (d.h. die erzeuge-Prozedur aufrufen), bis es 10 Nachrichten abgelegt habt
+erzeuger1: TASK PRIO 5;
+  TO 10 REPEAT;
+     CALL erzeuge(1);
+     ! ToDo - ist dann 1 Sekunde warten genau genug?
+     CALL loggeWarten('Erzeuger-Task 1', zeitE);
+     AFTER zeitE RESUME;  
+  END;
+END;
+
+! Zwei weitere Erzeuger - Unterschied ist nur in der Zahl, mit der die erzeuge-Prozedur aufgerufen wird
+erzeuger2: TASK PRIO 5;
+  TO 10 REPEAT
+     CALL erzeuge(2);
+     CALL loggeWarten('Erzeuger-Task 2', zeitE);
+     AFTER zeitE RESUME;  
+  END;
+END;
+
+erzeuger3: TASK PRIO 5;
+  TO 10 REPEAT
+     CALL erzeuge(3);
+     CALL loggeWarten('Erzeuger-Task 3', zeitE);
+     AFTER zeitE RESUME;  
+  END;
+END;
+
+
+!  ------- Die Verbraucher-Tasks -------
+verbraucher1: TASK PRIO 5;
+  DCL item FIXED INIT(0);
+  TO 10 REPEAT
+     verbrauche(1)
+     CALL loggeWarten('Verbraucher-Task 1', zeitV1);
+     AFTER zetiV1 SEC RESUME;  
+  END;
+END;
+
+verbraucher2: TASK PRIO 5;
+  DCL item FIXED INIT(0);
+  TO 10 REPEAT
+     verbrauche(2)
+     CALL loggeWarten('Verbraucher-Task 2', zeitV1);
+     AFTER zeitV2 RESUME;  
+  END;
+END;
+
+
+!  ------- Das Hauptprogramm -------
+main: TASK PRIO 1 MAIN;
+! Starten Sie drei gleichartige Erzeugertasks
+   ACTIVATE erzeuger1;
+   CALL loggeStart('Erster Erzeuger');
+   ACTIVATE erzeuger2;
+   CALL loggeStart('Zweiter Erzeuger');
+   ACTIVATE erzeuger3;
+   CALL loggeStart('Dritter Erzeuger');
+
+! Starten Sie eine Verbrauchertasks, welche die Nachrichten alle 1.5 s abruft.
+   ACTIVATE verbraucher1;
+   CALL loggeStart('Erster Verbraucher (1.5s version)');
+! Starten Sie eine zweite Verbrauchertasks, welche parallel Nachrichten alle 2s abruft.
+   ACTIVATE verbraucher2;   
+   CALL loggeStart('Erster Verbraucher (2s version)');
+END;
+
+MODEND;
+
