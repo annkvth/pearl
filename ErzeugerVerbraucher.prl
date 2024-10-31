@@ -1,0 +1,97 @@
+MODULE(ErzeugerVerbraucher);
+SYSTEM;
+        so: StdOut;
+
+PROBLEM;
+        SPC so DATION OUT SYSTEM ALPHIC;
+        DCL stdout DATION OUT ALPHIC DIM(*,80) FORWARD CREATED(so);
+
+        DCL pufferPlaetze INV FIXED INIT(8);
+        DCL puffer(0:pufferPlaetze-1) FIXED;
+        DCL schreibMutex SEMA PRESET(1);
+        DCL schreibZeiger FIXED INIT(0);
+        DCL freiePlaetze SEMA PRESET(8);
+        DCL leseMutex SEMA PRESET(1);
+        DCL leseZeiger FIXED INIT(0);
+        DCL belegtePlaetze SEMA PRESET(8);
+
+        erzeuge: PROC(wert FIXED);
+                REQUEST freiePlaetze;
+                REQUEST schreibMutex;
+                        puffer(schreibZeiger) := wert;
+                        schreibZeiger := ( schreibZeiger + 1) REM pufferPlaetze;
+                RELEASE schreibMutex;
+                RELEASE belegtePlaetze;
+        END;
+
+        verbrauche: PROC RETURNS (FIXED);
+                DCL ergebnis FIXED;
+
+                REQUEST belegtePlaetze;
+                REQUEST leseMutex;
+                        ergebnis := puffer(leseZeiger);
+                        puffer(leseZeiger) := 9;
+                        leseZeiger := (leseZeiger+1) REM pufferPlaetze;
+                RELEASE leseMutex;
+                RELEASE freiePlaetze;
+                RETURN (ergebnis);
+        END;
+
+        e1: TASK PRIO 5;
+                TO 10 REPEAT
+                        erzeuge(1);
+                        AFTER 1 SEC RESUME;
+                END;
+        END;
+
+        e2: TASK PRIO 4;
+                TO 10 REPEAT
+                        erzeuge(2);
+                        AFTER 1 SEC RESUME;
+                END;
+        END;
+
+        e3: TASK PRIO 3;
+                TO 10 REPEAT
+                        erzeuge(3);
+                        AFTER 1 SEC RESUME;
+                END;
+        END;
+        v1: TASK PRIO 6;
+                DCL wert FIXED;
+                REPEAT
+                        wert := verbrauche;
+                        IF wert == 9 THEN
+                                PUT 'Verbraucher 1: Keine neuen Werte mehr vorhanden.' TO stdout  BY A, SKIP;
+                        ELSE
+                                PUT 'Verbraucher 1: erhielt ', wert TO stdout BY A,F(3),SKIP;
+                        FIN;
+                        AFTER 1.5 SEC RESUME;
+                        IF wert == 9 THEN EXIT; FIN;
+                END;
+        END;
+
+        v2: TASK PRIO 7;
+                DCL wert2 FIXED;
+                REPEAT
+                        wert2 := verbrauche;
+                        IF wert2 == 9 THEN
+                                PUT 'Verbraucher 2: Keine neuen Werte mehr vorhanden.' TO  stdout BY A, SKIP;
+                        ELSE
+                                PUT 'Verbraucher 2: erhielt ', wert2 TO stdout BY A,F(3),SKIP;
+                        FIN;
+                        AFTER 2 SEC RESUME;
+                        IF wert2 == 9  THEN EXIT; FIN;
+                END;
+        END;
+
+t1: TASK PRIO 1  MAIN;
+        OPEN stdout;
+        ACTIVATE e1;
+        ACTIVATE e2;
+        ACTIVATE e3;
+        ACTIVATE v1;
+        ACTIVATE v2;
+END;
+
+MODEND;
