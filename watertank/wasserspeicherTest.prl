@@ -1,0 +1,114 @@
+! Probiere, die Komponenten des Simulators anzusprechen
+! siehe Befehle aus watertank.pdf
+
+
+MODULE(wasserspeicherTest);
+
+SYSTEM;
+so: StdOut;
+
+pump: Pump(0);
+
+pressure_sensor1: PressureSensor(0);
+pressure_sensor2: PressureSensor(1);
+
+floatswitch: FloatSwitch;
+
+valve: Valve;
+
+
+
+
+PROBLEM;
+SPC so DATION OUT SYSTEM ALPHIC GLOBAL;
+DCL stdOut DATION OUT ALPHIC DIM(*,80) FORWARD CREATED(so);
+
+SPC pump DATION OUT SYSTEM BASIC FIXED(15);
+DCL foerderpumpe DATION OUT BASIC FIXED(15) CREATED(pump);
+
+SPC pressure_sensor1 DATION IN SYSTEM BASIC FLOAT;
+DCL sensor1 DATION IN BASIC FLOAT CREATED(pressure_sensor1);
+SPC pressure_sensor2 DATION IN SYSTEM BASIC FLOAT;
+DCL sensor2 DATION IN BASIC FLOAT CREATED(pressure_sensor2);
+
+SPC valve DATION INOUT SYSTEM BASIC FIXED(15);
+DCL ventil DATION INOUT BASIC FIXED(15) CREATED(valve);
+
+SPC floatswitch DATION IN SYSTEM BASIC BIT(1);
+DCL schwimmerschalter DATION IN BASIC BIT(1) CREATED(floatswitch);
+
+! Zum Loggen: definiere Prozedur fuer Status-Output mit
+! einem Text und einem Zahlenwert
+  loggeAktion: PROC(logtext REF INV CHAR() IDENT, wert FIXED);
+     OPEN stdOut;
+     PUT logtext, ' ', wert TO stdout BY A, F(4), SKIP;
+     CLOSE stdOut;
+  END;
+
+
+test1: TASK MAIN;
+   DCL step FIXED INIT(0);
+   DCL drehzahl FIXED INIT(1000);
+   DCL lognachricht REF CHAR() INIT('');
+   DCL druck FLOAT;
+   DCL ventilstatus FIXED(15);
+   DCL schalterstellung BIT(1);
+   
+   OPEN stdOut;
+   PUT 'Starte Wassertank Testprogramm' TO stdOut BY A, SKIP;
+
+! --- Befehle fuer die Pumpe -------
+   OPEN foerderpumpe;
+   PUT 'Förderpumpe eingeschaltet' TO stdOut BY A, SKIP;
+
+   SEND drehzahl TO foerderpumpe;
+   loggeAktion('Setze Drehzahl auf ', drehzahl);
+
+   ! Die Förderpumpe wird mit folgendem Kommando ausgeschaltet:
+   SEND 0 TO foerderpumpe; 
+   PUT 'Förderpumpe abgeschaltet' TO stdOut BY A, SKIP;
+   CLOSE foerderpumpe;
+   PUT 'Förderpumpe closed' TO stdOut BY A, SKIP;
+
+
+! --- Befehle fuer die Drucksensoren -------
+   OPEN sensor1;
+   TAKE druck FROM sensor1;
+   loggeAktion('Messe Druck mit Sensor 1: ', druck);
+   CLOSE sensor1;	     
+
+
+
+! --- Befehle fuer das Ventil --------------
+   OPEN ventil;
+   TAKE ventilstatus FROM ventil;	
+   loggeAktion('Lese Ventilstatus: ', ventilstatus);
+
+   PUT 'Oeffne Ventil' TO stdOut BY A, SKIP;
+   SEND 1 TO ventil; 
+   TAKE ventilstatus FROM ventil;  
+   loggeAktion('Lese Ventilstatus: ', ventilstatus);
+   
+   PUT 'Schliesse Ventil' TO stdOut BY A, SKIP;
+   SEND 0 TO ventil; 
+   TAKE ventilstatus FROM ventil;  
+   loggeAktion('Lese Ventilstatus: ', ventilstatus);
+   CLOSE ventil;
+
+
+
+! --- Befehle fuer den Schwimmerschalter -------
+
+   OPEN schwimmerschalter;
+   PUT 'schwimmerschalter open' TO stdOut BY A, SKIP;
+   TAKE schalterstellung FROM schwimmerschalter;
+   loggeAktion('Lese Schalterstellung von Schwimmschalter: ', schalterstellung);
+   CLOSE schwimmerschalter;
+   PUT 'schwimmerschalter closed' TO stdOut BY A, SKIP;
+
+
+   CLOSE stdOut;
+END;
+
+MODEND;
+ 
