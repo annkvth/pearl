@@ -1,4 +1,5 @@
-gEchtzeitfähige Steuerung eines WasserspeichersMODULE(watertank);
+!Echtzeitfähige Steuerung eines Wasserspeichers
+MODULE(watertank);
 SYSTEM;
 stdout: StdOut;
 floatswitch: FloatSwitch;
@@ -24,7 +25,7 @@ DCL sensor2 DATION IN BASIC FLOAT CREATED(pressure_sensor2);
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 print_separator: PROC;
-PUT ’===================================================’ TO terminal BY A, SKIP;
+PUT '===================================================' TO terminal BY A, SKIP;
 END;
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -34,66 +35,66 @@ DCL rpm
 FIXED(31);
 
 print_separator;
-PUT ’WATERTANK: Test Foerderpumpe:’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: Test Foerderpumpe:' TO terminal BY A, SKIP;
 print_separator;
 TAKE rpm FROM foerderpumpe;
-PUT ’WATERTANK: Aktuelle Drehzahl = ’, rpm TO terminal BY A,F(4),SKIP;
-PUT ’WATERTANK: Pumpe ausschalten’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: Aktuelle Drehzahl = ', rpm TO terminal BY A,F(4),SKIP;
+PUT 'WATERTANK: Pumpe ausschalten' TO terminal BY A, SKIP;
 SEND 0 TO foerderpumpe;
 AFTER 3 SEC RESUME;
 TAKE rpm FROM foerderpumpe;
-PUT ’WATERTANK: Aktuelle Drehzahl = ’, rpm TO terminal BY A,F(4),SKIP;
-PUT ’WATERTANK: Pumpe einschalten mit einer Drehzahl von 500 rpm’ TO terminal BY A,SKIP;
+PUT 'WATERTANK: Aktuelle Drehzahl = ', rpm TO terminal BY A,F(4),SKIP;
+PUT 'WATERTANK: Pumpe einschalten mit einer Drehzahl von 500 rpm' TO terminal BY A,SKIP;
 SEND 500 TO foerderpumpe;
 AFTER 3 SEC RESUME;
 TAKE rpm FROM foerderpumpe;
-PUT ’WATERTANK: Aktuelle Drehzahl = ’, rpm TO terminal BY A,F(4),SKIP;
+PUT 'WATERTANK: Aktuelle Drehzahl = ', rpm TO terminal BY A,F(4),SKIP;
 
-PUT ’WATERTANK: Drehzahl von 1500 rpm setzen’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: Drehzahl von 1500 rpm setzen' TO terminal BY A, SKIP;
 SEND 1500 TO foerderpumpe;
 AFTER 3 SEC RESUME;
 TAKE rpm FROM foerderpumpe;
-PUT ’WATERTANK: Aktuelle Drehzahl = ’, rpm TO terminal BY A,F(4),SKIP;
-PUT ’WATERTANK: Max. Drehzahl von 2000 rpm setzen’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: Aktuelle Drehzahl = ', rpm TO terminal BY A,F(4),SKIP;
+PUT 'WATERTANK: Max. Drehzahl von 2000 rpm setzen' TO terminal BY A, SKIP;
 SEND 2000 TO foerderpumpe;
 AFTER 3 SEC RESUME;
 TAKE rpm FROM foerderpumpe;
-PUT ’WATERTANK: Aktuelle Drehzahl = ’, rpm TO terminal BY A,F(4),SKIP;
+PUT 'WATERTANK: Aktuelle Drehzahl = ', rpm TO terminal BY A,F(4),SKIP;
 
-PUT ’WATERTANK: Versuche eine zu hohen Drehzahl zu setzen (kein Effekt)’ TO terminal BY A,F(4),SKIP;
+PUT 'WATERTANK: Versuche eine zu hohen Drehzahl zu setzen (kein Effekt)' TO terminal BY A,F(4),SKIP;
 SEND 2500 TO foerderpumpe;
 AFTER 3 SEC RESUME;
 TAKE rpm FROM foerderpumpe;
-PUT ’WATERTANK: Aktuelle Drehzahl = ’, rpm TO terminal BY A,F(4),SKIP;
+PUT 'WATERTANK: Aktuelle Drehzahl = ', rpm TO terminal BY A,F(4),SKIP;
 
 AFTER 3 SEC RESUME;
 TAKE rpm FROM foerderpumpe;
-PUT ’WATERTANK: Aktuelle Drehzahl = ’, rpm TO terminal BY A,F(4),SKIP;
-PUT ’WATERTANK: Pumpe ausschalten’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: Aktuelle Drehzahl = ', rpm TO terminal BY A,F(4),SKIP;
+PUT 'WATERTANK: Pumpe ausschalten' TO terminal BY A, SKIP;
 SEND 0 TO foerderpumpe;
 AFTER 3 SEC RESUME;
 TAKE rpm FROM foerderpumpe;
-PUT ’WATERTANK: Aktuelle Drehzahl = ’, rpm TO terminal BY A,F(4),SKIP;
+PUT 'WATERTANK: Aktuelle Drehzahl = ', rpm TO terminal BY A,F(4),SKIP;
 END;
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 test_ventil: PROC;
 DCL status FIXED(15);
 print_separator;
-PUT ’WATERTANK: Teste Ventil:’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: Teste Ventil:' TO terminal BY A, SKIP;
 print_separator;
 ! Öffne Ventil
-PUT ’WATERTANK: Öffne das Ventil ’ TO terminal BY A,SKIP;
+PUT 'WATERTANK: Öffne das Ventil ' TO terminal BY A,SKIP;
 SEND 1 TO ventil;
 AFTER 1 SEC RESUME;
 TAKE status FROM ventil;
-PUT ’WATERTANK: Status des Ventils = ’, status TO terminal BY A,F(4),SKIP;
+PUT 'WATERTANK: Status des Ventils = ', status TO terminal BY A,F(4),SKIP;
 ! Schliesse Ventil
-PUT ’WATERTANK: Schliesse das Ventil ’ TO terminal BY A,SKIP;
+PUT 'WATERTANK: Schliesse das Ventil ' TO terminal BY A,SKIP;
 SEND 0 TO ventil;
 AFTER 1 SEC RESUME;
 TAKE status FROM ventil;
-PUT ’WATERTANK: Status des Ventils = ’, status TO terminal BY A,F(4),SKIP;
+PUT 'WATERTANK: Status des Ventils = ', status TO terminal BY A,F(4),SKIP;
 AFTER 3 SEC RESUME;
 END;
 
@@ -101,12 +102,12 @@ END;
 test_schwimmerschalter: PROC;
 DCL schalterstellung BIT(1);
 print_separator;
-PUT ’WATERTANK: Teste Schwimmerschalter:’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: Teste Schwimmerschalter:' TO terminal BY A, SKIP;
 print_separator;
 
 TAKE schalterstellung FROM schwimmerschalter;
-PUT ’WATERTANK: Schwimmerschalter aktuelle Stellung’,schalterstellung TO terminal BY A,B1(),SKIP;
-! oder  A,X,B1,SKIP ?
+PUT 'WATERTANK: Schwimmerschalter aktuelle Stellung',schalterstellung TO terminal BY A,X,B,SKIP;
+! oder  A,B(),SKIP ?
 
 ! Tank voll laufen lassen:
 SEND 1 TO ventil;
@@ -116,25 +117,25 @@ SEND 0 TO foerderpumpe;
 SEND 0 TO ventil;
 
 TAKE schalterstellung FROM schwimmerschalter;
-PUT ’WATERTANK: Schwimmerschalter aktuelle Stellung’,schalterstellung TO terminal BY A,B1(),SKIP;
+PUT 'WATERTANK: Schwimmerschalter aktuelle Stellung',schalterstellung TO terminal BY A,X,B,SKIP;
 END;
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 test_drucksensor1: PROC;
 DCL druck FLOAT;
 print_separator;
-PUT ’WATERTANK: Teste Drucksensor#1:’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: Teste Drucksensor#1:' TO terminal BY A, SKIP;
 print_separator;
 OPEN sensor1;
 TAKE druck FROM sensor1;
-PUT ’WATERTANK: Drucksensor#1 = ’, druck TO terminal BY A,F(8,4),SKIP;
+PUT 'WATERTANK: Drucksensor#1 = ', druck TO terminal BY A,F(8,4),SKIP;
 CLOSE sensor1;
 END;
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 test_drucksensor2: PROC;
 print_separator;
-PUT ’WATERTANK: Teste Drucksensor#2:’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: Teste Drucksensor#2:' TO terminal BY A, SKIP;
 print_separator;
 OPEN sensor2;
 CLOSE sensor2;
@@ -145,15 +146,15 @@ test: TASK PRIO 100 MAIN;
 DCL ventil_status FIXED(15);
 
 OPEN terminal;
-PUT ’WATERTANK: Öffne alle DATIONS’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: Öffne alle DATIONS' TO terminal BY A, SKIP;
 OPEN foerderpumpe;
-PUT ’WATERTANK: DATION Foerderpumpe geoeffnet’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: DATION Foerderpumpe geoeffnet' TO terminal BY A, SKIP;
 OPEN schwimmerschalter;
-PUT ’WATERTANK: DATION Schwimmerschalter geöffnet’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: DATION Schwimmerschalter geöffnet' TO terminal BY A, SKIP;
 OPEN ventil;
-PUT ’WATERTANK: DATION Ventil geoeffnet’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: DATION Ventil geoeffnet' TO terminal BY A, SKIP;
 print_separator;
-PUT ’WATERTANK: Starte test’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: Starte test' TO terminal BY A, SKIP;
 test_ventil;
 !
 !
@@ -161,13 +162,13 @@ test_drucksensor1;
 test_drucksensor2;
 test_pumpe;
 test_schwimmerschalter;
-PUT ’WATERTANK: Test beended’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: Test beended' TO terminal BY A, SKIP;
 CLOSE ventil;
-PUT ’WATERTANK: DATION ventil geschlossen’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: DATION ventil geschlossen' TO terminal BY A, SKIP;
 CLOSE schwimmerschalter;
-PUT ’WATERTANK: DATION schwimmerschalter geschlossen’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: DATION schwimmerschalter geschlossen' TO terminal BY A, SKIP;
 CLOSE foerderpumpe;
-PUT ’WATERTANK: DATION foerderpumpe geschlossen’ TO terminal BY A, SKIP;
+PUT 'WATERTANK: DATION foerderpumpe geschlossen' TO terminal BY A, SKIP;
 OPEN foerderpumpe;
 AFTER 600 SEC RESUME;
 CLOSE foerderpumpe;
