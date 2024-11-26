@@ -1,0 +1,46 @@
+!Echtzeitfähige Steuerung eines Wasserspeichers
+MODULE(wassertank);
+
+
+SYSTEM;
+stdout: StdOut;
+floatswitch: FloatSwitch;
+pump: Pump(0);
+valve: Valve;
+pressure_sensor1: PressureSensor(0);
+pressure_sensor2: PressureSensor(1);
+
+
+PROBLEM;
+SPC stdout DATION OUT SYSTEM ALPHIC GLOBAL;
+DCL terminal DATION OUT ALPHIC DIM(*,80) FORWARD CREATED(stdout);
+
+SPC floatswitch DATION IN SYSTEM BASIC BIT(1);
+DCL schwimmerschalter DATION IN BASIC BIT(1) CREATED(floatswitch);
+
+SPC pump DATION INOUT SYSTEM BASIC FIXED(31);
+DCL foerderpumpe DATION INOUT BASIC FIXED(31) CREATED(pump);
+
+SPC valve DATION INOUT SYSTEM BASIC FIXED(15);
+DCL ventil DATION INOUT BASIC FIXED(15) CREATED(valve);
+
+SPC pressure_sensor1 DATION IN SYSTEM BASIC FLOAT;
+DCL sensor1 DATION IN BASIC FLOAT CREATED(pressure_sensor1);
+SPC pressure_sensor2 DATION IN SYSTEM BASIC FLOAT;
+DCL sensor2 DATION IN BASIC FLOAT CREATED(pressure_sensor2);
+
+
+
+hauptteil: TASK PRIO 10 MAIN;
+
+
+OPEN terminal;
+PUT 'Testprogramm für alle DATIONS' TO terminal BY A, SKIP;
+
+! hier die einzelnen Tasks und Funktionen aufrufen ...
+
+PUT 'Ende des Main Tasks' TO terminal BY A, SKIP;
+
+CLOSE terminal;
+END;
+MODEND;
