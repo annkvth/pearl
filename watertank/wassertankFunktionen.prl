@@ -43,4 +43,32 @@ PUT 'Ende des Main Tasks' TO terminal BY A, SKIP;
 
 CLOSE terminal;
 END;
+
+pumpe_aenderung_rpm: PROC (rpm_soll FIXED) RETURNS (BIT(1)) ;
+! ändert die Drehzahl der Pumpe, für rpm_soll = 0 wird sie ausgeschaltet, mit Setzen einer Drehzahl wird sie eingeschaltet
+! die Drehzahl muss entweder 0 (aus) sein, oder zwischen 100 (Leerlauf) und 2000 (max. Drehzahl) liegen
+! nach der Änderung wird die Drehzahl überprüft
+! gibt 1 für eine erfolgreiche Änderung der Drehzahl zurück
+
+DCL rpm_ist FIXED;
+DCL return_value BIT(1);
+
+IF rpm_soll == 0 OR (rpm_soll >= 100 AND rpm_soll <= 2000) THEN
+
+        SEND rpm_soll TO foerderpumpe;
+        AFTER 3 SEC RESUME;
+        TAKE rpm_ist FROM foerderpumpe;
+
+        IF rpm_ist == rpm_soll THEN
+                return_value := ('1'B);
+        ELSE
+                return_value :=  ('0'B);
+        FIN;
+ELSE
+        return_value := ('0'B);
+FIN;
+RETURN (return_value);
+
+END;
+
 MODEND;
