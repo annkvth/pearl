@@ -31,18 +31,33 @@ DCL sensor2 DATION IN BASIC FLOAT CREATED(pressure_sensor2);
 
 
 
-hauptteil: TASK PRIO 10 MAIN;
-
-
-OPEN terminal;
-PUT 'Testprogramm für alle DATIONS' TO terminal BY A, SKIP;
-
-! hier die einzelnen Tasks und Funktionen aufrufen ...
-
-PUT 'Ende des Main Tasks' TO terminal BY A, SKIP;
-
-CLOSE terminal;
+! Hilfsfunktion fürs Protokollieren
+loggeAktionWert: PROC(aktion REF INV CHAR(), wert FIXED);
+  PUT aktion, wert TO terminal BY A,F(8),SKIP;
 END;
+
+
+! Auslesen der Drucksensoren und Rückgabe des gemessenen Drucks
+lese_druck1: PROC RETURNS(FLOAT(23));
+  DCL druck FLOAT(23);
+  OPEN sensor1;
+  TAKE druck FROM sensor1;
+  CLOSE sensor1;
+  loggeAktionWert('Auslesen von Drucksensor 1 (Pumpe/Ventil): ', ENTIER druck);
+  RETURN(druck);
+END;
+
+lese_druck2: PROC RETURNS(FLOAT(23));
+  DCL druck FLOAT(23);
+  OPEN sensor2;
+  TAKE druck FROM sensor2;
+  CLOSE sensor2;
+  loggeAktionWert('Auslesen von Drucksensor 2 (Tank): ', ENTIER druck);
+  RETURN(druck);
+END;
+
+
+
 
 pumpe_aenderung_rpm: PROC (rpm_soll FIXED) RETURNS (BIT(1)) ;
 ! ändert die Drehzahl der Pumpe, für rpm_soll = 0 wird sie ausgeschaltet, mit Setzen einer Drehzahl wird sie eingeschaltet
@@ -69,6 +84,33 @@ ELSE
 FIN;
 RETURN (return_value);
 
+END;
+
+
+
+hauptteil: TASK PRIO 10 MAIN;
+
+DCL ventil_status FIXED(15);
+DCL druckPumpe FLOAT(23);
+DCL druckTank FLOAT(23);
+
+OPEN terminal;
+PUT 'Testprogramm für alle DATIONS' TO terminal BY A, SKIP;
+
+! hier die einzelnen Tasks und Funktionen aufrufen ...
+
+!!! BUG! Die Drucksensoren funktionieren nicht richtig, wenn man nicht vorher schon irgendwas anderes gemacht oder lange genug gewartet hat...
+OPEN ventil;
+TAKE ventil_status FROM ventil;
+AFTER 5 SEC RESUME;
+
+druckPumpe = lese_druck1;
+druckTank = lese_druck2;
+
+PUT 'Ende des Main Tasks' TO terminal BY A, SKIP;
+
+CLOSE ventil;
+CLOSE terminal;
 END;
 
 MODEND;
