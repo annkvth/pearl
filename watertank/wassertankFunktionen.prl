@@ -69,15 +69,26 @@ lese_schwimmerschalter: PROC RETURNS (BIT(1));
   RETURN(status);
 END;
 
+schwimmerschalter_state: PROC RETURNS (BIT(1));
+! liest die Schalterstellung des Schwimmerschalters aus
+! gibt 0 für einen offenen Schalter zurück
+! gibt 1 für einen geschlossenen Schalter zurück --> Überlauf
+DCL schalterstellung BIT(1);
+TAKE schalterstellung FROM schwimmerschalter;
+RETURN (schalterstellung);
+END;
 
-pumpe_aenderung_rpm: PROC (rpm_soll FIXED) RETURNS (BIT(1)) ;
-! ändert die Drehzahl der Pumpe, für rpm_soll = 0 wird sie ausgeschaltet, mit Setzen einer Drehzahl wird sie eingeschaltet
+pumpe_aenderung_rpm: PROC (rpm_soll FIXED) RETURNS (BIT(2)) ;
+! ändert die Drehzahl der Pumpe, für rpm_soll = 0 wird sie ausgeschaltet, mit dem Setzen einer Drehzahl wird sie eingeschaltet
 ! die Drehzahl muss entweder 0 (aus) sein, oder zwischen 100 (Leerlauf) und 2000 (max. Drehzahl) liegen
 ! nach der Änderung wird die Drehzahl überprüft
-! gibt 1 für eine erfolgreiche Änderung der Drehzahl zurück
+! gibt 11 für eine erfolgreiche Änderung der Drehzahl zurück
+! gibt 00 für einen unplausiblen Wert zurück
+! gibt 01 für eine falsch ausgeführte Änderung
+
 
 DCL rpm_ist FIXED;
-DCL return_value BIT(1);
+DCL return_value BIT(2);
 
 IF rpm_soll == 0 OR (rpm_soll >= 100 AND rpm_soll <= 2000) THEN
 
@@ -85,18 +96,36 @@ IF rpm_soll == 0 OR (rpm_soll >= 100 AND rpm_soll <= 2000) THEN
         AFTER 3 SEC RESUME;
         TAKE rpm_ist FROM foerderpumpe;
 
-        IF rpm_ist == rpm_soll THEN
-                return_value := ('1'B);
+        IF (rpm_ist >=  rpm_soll*0.9) AND (rpm_ist <= rpm_soll*1.1)  THEN
+                return_value := ('11'B);
         ELSE
-                return_value :=  ('0'B);
+                return_value :=  ('01'B);
         FIN;
 ELSE
-        return_value := ('0'B);
+        return_value := ('00'B);
 FIN;
 RETURN (return_value);
 
 END;
 
+lese_pumpe: PROC RETURNS (FIXED);
+!liest die Drehzahl der Pumpe aus
+!prüft die Plausibilität des Wertes
+!gibt 9999 zurück für einen unplausiblen Wert
+
+DCL return_value FIXED;
+DCL rpm_ist FIXED;
+TAKE rpm_ist FROM foerderpumpe;
+
+
+IF rpm_ist == 0 OR (rpm_ist >= 100 AND rpm_ist <= 2000) THEN
+        return_value := rpm_ist;
+ELSE
+        return_value := 9999;
+
+FIN;
+RETURN (return_value);
+END;
 
 
 hauptteil: TASK PRIO 10 MAIN;
@@ -105,6 +134,8 @@ DCL ventil_status FIXED(15);
 DCL druckPumpe FLOAT(23);
 DCL druckTank FLOAT(23);
 DCL schwimmerStatus BIT(1);
+DCL aenderung_pumpe BIT(2);
+DCL status_schwimmerschalter BIT(1);
 
 OPEN terminal;
 PUT 'Testprogramm für alle DATIONS' TO terminal BY A, SKIP;
@@ -114,12 +145,19 @@ PUT 'Testprogramm für alle DATIONS' TO terminal BY A, SKIP;
 !!! BUG! Die Drucksensoren funktionieren nicht richtig, wenn man nicht vorher schon irgendwas anderes gemacht oder lange genug gewartet hat...
 OPEN ventil;
 TAKE ventil_status FROM ventil;
+OPEN schwimmerschalter;
+OPEN foerderpumpe;
+
 AFTER 5 SEC RESUME;
+
+
 
 druckPumpe = lese_druck1;
 druckTank = lese_druck2;
 
 schwimmerStatus = lese_schwimmerschalter;
+
+
 
 PUT 'Ende des Main Tasks' TO terminal BY A, SKIP;
 
