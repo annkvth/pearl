@@ -160,7 +160,8 @@ schwimmerStatus = lese_schwimmerschalter;
 
 
 PUT 'Ende des Main Tasks' TO terminal BY A, SKIP;
-
+CLOSE schwimmerschalter;
+CLOSE foerderpumpe;
 CLOSE ventil;
 CLOSE terminal;
 END;
