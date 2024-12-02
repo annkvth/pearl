@@ -57,6 +57,17 @@ lese_druck2: PROC RETURNS(FLOAT(23));
 END;
 
 
+! Status des Schwimmschalters auslesen
+lese_schwimmerschalter: PROC RETURNS (BIT(1));
+  DCL status BIT(1);
+  PUT 'WATERTANK: Teste Schwimmerschalter:' TO terminal BY A, SKIP;
+  OPEN schwimmerschalter;
+  TAKE status FROM schwimmerschalter;
+  loggeAktionWert('Auslesen von Drucksensor 2 (Tank): ', TOFIXED status);
+  PUT 'WATERTANK: Schwimmerschalter aktuelle Stellung',status TO terminal BY A,X,B,SKIP;
+  CLOSE schwimmerschalter;
+  RETURN(status);
+END;
 
 
 pumpe_aenderung_rpm: PROC (rpm_soll FIXED) RETURNS (BIT(1)) ;
@@ -93,6 +104,7 @@ hauptteil: TASK PRIO 10 MAIN;
 DCL ventil_status FIXED(15);
 DCL druckPumpe FLOAT(23);
 DCL druckTank FLOAT(23);
+DCL schwimmerStatus BIT(1);
 
 OPEN terminal;
 PUT 'Testprogramm für alle DATIONS' TO terminal BY A, SKIP;
@@ -106,6 +118,8 @@ AFTER 5 SEC RESUME;
 
 druckPumpe = lese_druck1;
 druckTank = lese_druck2;
+
+schwimmerStatus = lese_schwimmerschalter;
 
 PUT 'Ende des Main Tasks' TO terminal BY A, SKIP;
 
