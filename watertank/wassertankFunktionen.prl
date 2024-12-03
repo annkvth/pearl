@@ -29,6 +29,16 @@ DCL sensor1 DATION IN BASIC FLOAT CREATED(pressure_sensor1);
 SPC pressure_sensor2 DATION IN SYSTEM BASIC FLOAT;
 DCL sensor2 DATION IN BASIC FLOAT CREATED(pressure_sensor2);
 
+DCL boltFoerderpumpe BOLT;
+
+
+! Task Druck überwachen
+ueberwache_druck_speicher: TASK;
+DCL druck_speicher FLOAT(23);
+
+druck_speicher := lese_druck2;
+
+END;
 
 
 ! Hilfsfunktion fürs Protokollieren
@@ -92,9 +102,19 @@ DCL return_value BIT(2);
 
 IF rpm_soll == 0 OR (rpm_soll >= 100 AND rpm_soll <= 2000) THEN
 
+        RESERVE boltFoerderpumpe;
+        OPEN foerderpumpe;
         SEND rpm_soll TO foerderpumpe;
-        AFTER 3 SEC RESUME;
+        CLOSE foerderpumpe;
+        FREE boltFoerderpumpe;
+
+        AFTER 4 SEC RESUME;
+
+        ENTER boltFoerderpumpe;
+        OPEN foerderpumpe;
         TAKE rpm_ist FROM foerderpumpe;
+        CLOSE foerderpumpe;
+        LEAVE boltFoerderpumpe;
 
         IF (rpm_ist >=  rpm_soll*0.9) AND (rpm_ist <= rpm_soll*1.1)  THEN
                 return_value := ('11'B);
@@ -115,7 +135,13 @@ lese_pumpe: PROC RETURNS (FIXED);
 
 DCL return_value FIXED;
 DCL rpm_ist FIXED;
+
+
+ENTER boltFoerderpumpe;
+OPEN foerderpumpe;
 TAKE rpm_ist FROM foerderpumpe;
+CLOSE foerderpumpe;
+LEAVE boltFoerderpumpe;
 
 
 IF rpm_ist == 0 OR (rpm_ist >= 100 AND rpm_ist <= 2000) THEN
@@ -146,10 +172,10 @@ PUT 'Testprogramm für alle DATIONS' TO terminal BY A, SKIP;
 OPEN ventil;
 TAKE ventil_status FROM ventil;
 OPEN schwimmerschalter;
-OPEN foerderpumpe;
 
 AFTER 5 SEC RESUME;
 
+ALL 1 SEC DURING 30 SEC ACTIVATE ueberwache_druck_speicher;
 
 
 druckPumpe = lese_druck1;
@@ -158,10 +184,10 @@ druckTank = lese_druck2;
 schwimmerStatus = lese_schwimmerschalter;
 
 
+AFTER 40 SEC RESUME; ! Benötigt, da sonst das Terminal zu früh geschlossen wird.
 
 PUT 'Ende des Main Tasks' TO terminal BY A, SKIP;
 CLOSE schwimmerschalter;
-CLOSE foerderpumpe;
 CLOSE ventil;
 CLOSE terminal;
 END;
