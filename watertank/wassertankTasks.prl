@@ -31,11 +31,11 @@ DCL sensor2 DATION IN BASIC FLOAT CREATED(pressure_sensor2);
 
 DCL boltFoerderpumpe BOLT;
 
-! globale Variablen - das Druck-Monitor-Task aendert sie, das Pump-Steuer-Task liest sie und reagiert
+! geteilte/"modul-globale" Variabe - das Druck-Monitor-Task aendert sie, das Pump-Steuer-Task liest sie und reagiert
 DCL pumpen_noetig BIT(1) INIT ('0'B1);
 DCL turbo_noetig BIT(1);
 
-! Variable, um das Beenden der Wassertank-Simulation zu steuern
+! geteilte/"modul-globale" Variabe, um das Beenden der Wassertank-Simulation zu steuern
 DCL sim_laeuft BIT(1) INIT ('1'B1);
 
 ! ---------------------------------------
@@ -73,7 +73,6 @@ END;
 ! Status des Ventils auslesen
 lese_ventil: PROC RETURNS (FIXED(15));
   DCL v_status FIXED(15);
-  DCL status BIT(1);
   OPEN ventil;
   TAKE v_status FROM ventil;
   loggeAktionWert('Auslesen von Ventil-Status: ', v_status);
