@@ -67,6 +67,26 @@ lese_druck2: PROC RETURNS(FLOAT(23));
 END;
 
 
+! Status des Ventils auslesen
+lese_ventil: PROC RETURNS (FIXED(15));
+  DCL v_status FIXED(15);
+  DCL status BIT(1);
+  OPEN ventil;
+  TAKE v_status FROM ventil;
+  loggeAktionWert('Auslesen von Ventil-Status: ', v_status);
+  CLOSE ventil;
+  RETURN(v_status);
+END;
+
+! Status des Ventils aendern
+schreibe_ventil: PROC (befehl FIXED(15));
+  OPEN ventil;
+  SEND befehl TO ventil;
+  loggeAktionWert('Sende Kommando an Ventil: ', befehl);
+  CLOSE ventil;
+END;
+
+
 ! Status des Schwimmschalters auslesen
 lese_schwimmerschalter: PROC RETURNS (BIT(1));
   DCL status BIT(1);
@@ -157,6 +177,7 @@ END;
 hauptteil: TASK PRIO 10 MAIN;
 
 DCL ventil_status FIXED(15);
+DCL ventil_befehl FIXED(15);
 DCL druckPumpe FLOAT(23);
 DCL druckTank FLOAT(23);
 DCL schwimmerStatus BIT(1);
@@ -168,15 +189,15 @@ PUT 'Testprogramm für alle DATIONS' TO terminal BY A, SKIP;
 
 ! hier die einzelnen Tasks und Funktionen aufrufen ...
 
-!!! BUG! Die Drucksensoren funktionieren nicht richtig, wenn man nicht vorher schon irgendwas anderes gemacht oder lange genug gewartet hat...
-OPEN ventil;
-TAKE ventil_status FROM ventil;
+!!! BUG! Die Drucksensoren funktionieren nicht richtig, wenn man nicht vorher schon irgendwas anderes gemacht oder lange genug gewartet hat... Oder vielleicht muss einfach nur der schwimmerschalter offen sein?!
 OPEN schwimmerschalter;
-
 AFTER 5 SEC RESUME;
 
-ALL 1 SEC DURING 30 SEC ACTIVATE ueberwache_druck_speicher;
+ventil_status = lese_ventil;
+ventil_befehl = 1
+schreibe_ventil(ventil_befehl)
 
+ALL 1 SEC DURING 30 SEC ACTIVATE ueberwache_druck_speicher;
 
 druckPumpe = lese_druck1;
 druckTank = lese_druck2;
@@ -188,7 +209,7 @@ AFTER 40 SEC RESUME; ! Benötigt, da sonst das Terminal zu früh geschlossen wir
 
 PUT 'Ende des Main Tasks' TO terminal BY A, SKIP;
 CLOSE schwimmerschalter;
-CLOSE ventil;
+!CLOSE ventil;
 CLOSE terminal;
 END;
 
