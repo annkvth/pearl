@@ -86,23 +86,24 @@ END;
 
 
 ! Status des Schwimmschalters auslesen
-lese_schwimmerschalter: PROC RETURNS (BIT(1));
-  DCL status BIT(1);
-  PUT 'WATERTANK: Teste Schwimmerschalter:' TO terminal BY A, SKIP;
-  OPEN schwimmerschalter;
-  TAKE status FROM schwimmerschalter;
-  loggeAktionWert('Auslesen von Drucksensor 2 (Tank): ', TOFIXED status);
-  PUT 'WATERTANK: Schwimmerschalter aktuelle Stellung',status TO terminal BY A,X,B,SKIP;
-  CLOSE schwimmerschalter;
-  RETURN(status);
-END;
+!lese_schwimmerschalter: PROC RETURNS (BIT(1));
+ ! DCL status BIT(1);
+  !PUT 'WATERTANK: Teste Schwimmerschalter:' TO terminal BY A, SKIP;
+  !OPEN schwimmerschalter;
+  !TAKE status FROM schwimmerschalter;
+  !loggeAktionWert('Auslesen von Drucksensor 2 (Tank): ', TOFIXED status);
+  !PUT 'WATERTANK: Schwimmerschalter aktuelle Stellung',status TO terminal BY A,X,B,SKIP;
+  !CLOSE schwimmerschalter;
+  !RETURN(status);
+!END;
 
-schwimmerschalter_state: PROC RETURNS (BIT(1));
+lese_schwimmerschalter: PROC RETURNS (BIT(1));
 ! liest die Schalterstellung des Schwimmerschalters aus
 ! gibt 0 für einen offenen Schalter zurück
 ! gibt 1 für einen geschlossenen Schalter zurück --> Überlauf
 DCL schalterstellung BIT(1);
 TAKE schalterstellung FROM schwimmerschalter;
+loggeAktionWert('Auslesen von Schwimmerschalter: ', TOFIXED schalterstellung);
 RETURN (schalterstellung);
 END;
 
@@ -114,33 +115,54 @@ pumpe_aenderung_rpm: PROC (rpm_soll FIXED) RETURNS (BIT(2)) ;
 ! gibt 00 für einen unplausiblen Wert zurück
 ! gibt 01 für eine falsch ausgeführte Änderung
 
-  DCL rpm_ist FIXED;
-  DCL return_value BIT(2);
+DCL rpm_ist FIXED;
+DCL return_value BIT(2);
+DCL clock1 CLOCK;
+DCL clock2 CLOCK;
+DCL dauer DURATION;
+DCL pruef1 BIT(1) INIT ('0'B);
+DCL prufe2 BIT(1) INIT ('0'B);
 
-  IF rpm_soll == 0 OR (rpm_soll >= 100 AND rpm_soll <= 2000) THEN
 
-      RESERVE boltFoerderpumpe;
-      OPEN foerderpumpe;
-      SEND rpm_soll TO foerderpumpe;
-      CLOSE foerderpumpe;
-      FREE boltFoerderpumpe;
+IF rpm_soll == 0 OR (rpm_soll >= 100 AND rpm_soll <= 2000) THEN
 
-      AFTER 4 SEC RESUME;
+        RESERVE boltFoerderpumpe;
+        OPEN foerderpumpe;
+        SEND rpm_soll TO foerderpumpe;
+        CLOSE foerderpumpe;
+        FREE boltFoerderpumpe;
 
-      ENTER boltFoerderpumpe;
-      OPEN foerderpumpe;
-      TAKE rpm_ist FROM foerderpumpe;
-      CLOSE foerderpumpe;
-      LEAVE boltFoerderpumpe;
+        clock1 := NOW;
+        return_value := '01'B;
+        REPEAT
+          ENTER boltFoerderpumpe;
+          OPEN foerderpumpe;
+          TAKE rpm_ist FROM foerderpumpe;
+          CLOSE foerderpumpe;
+          LEAVE boltFoerderpumpe;
 
-      IF (rpm_ist >=  rpm_soll*0.9) AND (rpm_ist <= rpm_soll*1.1)  THEN
-              return_value := ('11'B);
-      ELSE
-              return_value :=  ('01'B);
-      FIN;
-  ELSE
-      return_value := ('00'B);
-  FIN;
+           IF (rpm_ist >=  rpm_soll*0.9) AND (rpm_ist <= rpm_soll*1.1)  THEN
+              AFTER 0.5 SEC RESUME;
+
+              ENTER boltFoerderpumpe;
+              OPEN foerderpumpe;
+              TAKE rpm_ist FROM foerderpumpe;
+              CLOSE foerderpumpe;
+              LEAVE boltFoerderpumpe;
+
+              IF ( rpm_ist >= rpm_soll*0.9) AND (rpm_ist <= rpm_soll*1.1) THEN                                                                                                                                                               
+                 return_value := ('11'B);
+                 EXIT;
+              FIN;
+           FIN;
+        clock2 := NOW;
+        IF (clock2-clock1 >= 4 SEC) THEN
+           EXIT;
+        FIN;
+        END;
+ELSE
+        return_value := ('00'B);
+FIN;
 RETURN (return_value);
 
 END;
