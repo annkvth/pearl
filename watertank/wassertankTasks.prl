@@ -1,0 +1,331 @@
+!Echtzeitfähige Steuerung eines Wasserspeichers
+MODULE(wassertank);
+
+
+SYSTEM;
+stdout: StdOut;
+floatswitch: FloatSwitch;
+pump: Pump(0);
+valve: Valve;
+pressure_sensor1: PressureSensor(0);
+pressure_sensor2: PressureSensor(1);
+
+
+PROBLEM;
+SPC stdout DATION OUT SYSTEM ALPHIC GLOBAL;
+DCL terminal DATION OUT ALPHIC DIM(*,80) FORWARD CREATED(stdout);
+
+SPC floatswitch DATION IN SYSTEM BASIC BIT(1);
+DCL schwimmerschalter DATION IN BASIC BIT(1) CREATED(floatswitch);
+
+SPC pump DATION INOUT SYSTEM BASIC FIXED(31);
+DCL foerderpumpe DATION INOUT BASIC FIXED(31) CREATED(pump);
+
+SPC valve DATION INOUT SYSTEM BASIC FIXED(15);
+DCL ventil DATION INOUT BASIC FIXED(15) CREATED(valve);
+
+SPC pressure_sensor1 DATION IN SYSTEM BASIC FLOAT;
+DCL sensor1 DATION IN BASIC FLOAT CREATED(pressure_sensor1);
+SPC pressure_sensor2 DATION IN SYSTEM BASIC FLOAT;
+DCL sensor2 DATION IN BASIC FLOAT CREATED(pressure_sensor2);
+
+DCL boltFoerderpumpe BOLT;
+
+! globale Variablen - das Druck-Monitor-Task aendert sie, das Pump-Steuer-Task liest sie und reagiert
+DCL pumpen_noetig BIT(1) INIT ('0'B1);
+DCL turbo_noetig BIT(1);
+
+! Variable, um das Beenden der Wassertank-Simulation zu steuern
+DCL sim_laeuft BIT(1) INIT ('1'B1);
+
+! ---------------------------------------
+! ------------- Prozeduren  ------------- 
+! ---------------------------------------
+
+! Hilfsfunktion fürs Protokollieren
+loggeAktionWert: PROC(aktion REF INV CHAR(), wert FIXED);
+  OPEN terminal;
+  PUT aktion, wert TO terminal BY A,F(8),SKIP;
+  CLOSE terminal;
+END;
+
+
+! Auslesen der Drucksensoren und Rückgabe des gemessenen Drucks
+lese_druck1: PROC RETURNS(FLOAT(23));
+  DCL druck FLOAT(23);
+  OPEN sensor1;
+  TAKE druck FROM sensor1;
+  CLOSE sensor1;
+  loggeAktionWert('Auslesen von Drucksensor 1 (Pumpe/Ventil): ', ENTIER druck);
+  RETURN(druck);
+END;
+
+lese_druck2: PROC RETURNS(FLOAT(23));
+  DCL druck FLOAT(23);
+  OPEN sensor2;
+  TAKE druck FROM sensor2;
+  CLOSE sensor2;
+  loggeAktionWert('Auslesen von Drucksensor 2 (Tank): ', ENTIER druck);
+  RETURN(druck);
+END;
+
+
+! Status des Ventils auslesen
+lese_ventil: PROC RETURNS (FIXED(15));
+  DCL v_status FIXED(15);
+  DCL status BIT(1);
+  OPEN ventil;
+  TAKE v_status FROM ventil;
+  loggeAktionWert('Auslesen von Ventil-Status: ', v_status);
+  CLOSE ventil;
+  RETURN(v_status);
+END;
+
+! Status des Ventils aendern
+schreibe_ventil: PROC (befehl FIXED(15));
+  OPEN ventil;
+  SEND befehl TO ventil;
+  loggeAktionWert('Sende Kommando an Ventil: ', befehl);
+  CLOSE ventil;
+END;
+
+
+! Status des Schwimmschalters auslesen
+! liest die Schalterstellung des Schwimmerschalters aus
+! gibt 0 für einen offenen Schalter zurück
+! gibt 1 für einen geschlossenen Schalter zurück --> Überlauf
+lese_schwimmerschalter: PROC RETURNS (BIT(1));
+  DCL schalterstellung BIT(1);
+  !OPEN schwimmerschalter;
+  TAKE schalterstellung FROM schwimmerschalter;
+  loggeAktionWert('Auslesen von Schwimmerschalter: ', TOFIXED schalterstellung);
+  !CLOSE schwimmerschalter;
+  RETURN (schalterstellung);
+END;
+
+
+pumpe_aenderung_rpm: PROC (rpm_soll FIXED) RETURNS (BIT(2)) ;
+! ändert die Drehzahl der Pumpe, für rpm_soll = 0 wird sie ausgeschaltet, mit dem Setzen einer Drehzahl wird sie eingeschaltet
+! die Drehzahl muss entweder 0 (aus) sein, oder zwischen 100 (Leerlauf) und 2000 (max. Drehzahl) liegen
+! nach der Änderung wird die Drehzahl überprüft
+! gibt 11 für eine erfolgreiche Änderung der Drehzahl zurück
+! gibt 00 für einen unplausiblen Wert zurück
+! gibt 01 für eine falsch ausgeführte Änderung
+
+  DCL rpm_ist FIXED;
+  DCL return_value BIT(2);
+
+! 
+!  IF rpm_soll == 0 OR (rpm_soll >= 100 AND rpm_soll <= 2000) THEN
+  ! Annike: anscheinend hoert die Pumpe auf zu arbeiten, wenn man CLOSE macht?!
+      !RESERVE boltFoerderpumpe;
+      !OPEN foerderpumpe;
+      SEND rpm_soll TO foerderpumpe;
+      loggeAktionWert('Sende RPM an Pumpe: ', rpm_soll);
+      !CLOSE foerderpumpe;
+      !FREE boltFoerderpumpe;
+
+      AFTER 4 SEC RESUME;
+
+      !ENTER boltFoerderpumpe;
+      !OPEN foerderpumpe;
+      TAKE rpm_ist FROM foerderpumpe;
+      loggeAktionWert('Lese RPM von Pumpe: ', rpm_ist);
+      !CLOSE foerderpumpe;
+      !LEAVE boltFoerderpumpe;
+
+      IF (rpm_ist >=  rpm_soll*0.9) AND (rpm_ist <= rpm_soll*1.1)  THEN
+              return_value := ('11'B);
+      ELSE
+              return_value :=  ('01'B);
+      FIN;
+!  ELSE
+!      return_value := ('00'B);
+!  FIN;
+RETURN (return_value);
+
+END;
+
+
+
+
+lese_pumpe: PROC RETURNS (FIXED);
+!liest die Drehzahl der Pumpe aus
+!prüft die Plausibilität des Wertes
+!gibt 9999 zurück für einen unplausiblen Wert
+
+  DCL return_value FIXED;
+  DCL rpm_ist FIXED;
+
+!  ENTER boltFoerderpumpe;
+  !OPEN foerderpumpe;
+  TAKE rpm_ist FROM foerderpumpe;
+  !CLOSE foerderpumpe;
+!  LEAVE boltFoerderpumpe;
+
+  IF rpm_ist == 0 OR (rpm_ist >= 100 AND rpm_ist <= 2000) THEN
+      return_value := rpm_ist;
+  ELSE
+      return_value := 9999;
+  FIN;
+  RETURN (return_value);
+END;
+
+
+
+! --------------------------------------
+! --------------- Tasks  --------------- 
+! --------------------------------------
+
+startup: TASK PRIO 10 MAIN;
+  OPEN terminal;
+  PUT 'Testprogramm für Task-Aufteilung' TO terminal BY A, SKIP;
+  CLOSE terminal;
+
+  !!! BUG! Die Drucksensoren funktionieren nicht richtig, wenn man nicht vorher schon irgendwas anderes gemacht oder lange genug gewartet hat... Oder vielleicht muss einfach nur der schwimmerschalter offen sein?!
+  ACTIVATE ueberwache_schwimmschalter;
+  AFTER 5 SEC RESUME;
+  ACTIVATE ueberwache_druck_speicher;
+  ACTIVATE ueberwache_pump_bedarf;
+  ACTIVATE ueberwache_ventil; 
+
+  AFTER 300 SEC RESUME;
+  ! Beende alle repeats in den Tasks
+  sim_laeuft = ('0'B1);
+  
+END;
+
+
+/* Wenn der aktuelle Zustand "Pumpe aktiv" ist:
+   - wenn pumpen_noetig ist, aendere nichts
+   - wenn pumpen_noetig nicht gesezts ist, schließe Ventil und schalte die Pumpe ab
+
+   Wenn der aktuelle Zustand "Pumpe nicht aktiv" ist:
+   - wenn pumpen_noetig nicht gesetzt ist, aendere nichts
+   - wenn pumpen_noetig gesetzt ist, setze RPM, warte bis Druck vor Ventil >= Druck im Tank ist, oeffne Ventil   
+
+   ACHTUNG: Beobachtung: Druck zwischen Pumpe und Ventil steigt nur langsam, dadurch öffnet das Ventil sehr spät
+   IDEE: mit 1000 (+?) RPM starten, um schneller Druck aufzubauen, reduzieren wenn Tank mehr als 50% voll?
+
+*/
+ueberwache_pump_bedarf: TASK;
+  DCL aenderung_pumpe BIT(2);
+  DCL pumpe_aktiv BIT(1);
+  DCL turbo_aktiv BIT(1);
+
+  pumpe_aktiv ='0'B1;
+  OPEN foerderpumpe;
+  WHILE sim_laeuft REPEAT
+    IF pumpen_noetig EQ '1'B1 THEN
+        IF pumpe_aktiv EQ '0'B1 THEN
+   	    loggeAktionWert('Anforderung an Pumpe: setze RPM auf ', 1000);
+            aenderung_pumpe = pumpe_aenderung_rpm(1000);
+  	    ! Hier noch den Status auswerten?	  
+  	    pumpe_aktiv='1'B1;
+	    turbo_aktiv ='1'B1;
+        FIN;
+	IF pumpe_aktiv EQ '1'B1 THEN
+ 	    IF turbo_noetig EQ '0'B1 THEN
+	        IF turbo_aktiv EQ '1'B1 THEN
+		    aenderung_pumpe = pumpe_aenderung_rpm(500);
+                    turbo_aktiv ='0'B1;
+		FIN;
+	    FIN;		
+	FIN;
+    ELSE
+        IF pumpe_aktiv EQ '1'B1 THEN
+            schreibe_ventil(0);
+            aenderung_pumpe = pumpe_aenderung_rpm(0);
+            ! Hier noch den Status auswerten?
+  	  pumpe_aktiv='0'B1;
+        FIN;
+    FIN;
+    AFTER 1 SEC RESUME;
+  END;
+  CLOSE foerderpumpe;
+END;
+
+
+
+! Task Ventil überwachen
+! Wenn pumpen angefordert ist  !! und Pumpe aktiv? !!
+! Und der druck1 ausreichend hoch ist, oeffne Ventil, falls es zu ist
+! Wenn kein Pumpen noetig, schliesse Ventil, falls es auf ist
+ueberwache_ventil: TASK;
+  DCL druckPumpe FLOAT(23);
+  DCL druckTank FLOAT(23);
+  DCL ventil_status FIXED(15);
+  
+  WHILE sim_laeuft REPEAT
+      ventil_status = lese_ventil;
+      IF ventil_status EQ 0 THEN
+          IF pumpen_noetig EQ '1'B1 THEN
+    	      druckPumpe = lese_druck1;
+              druckTank = lese_druck2;
+  	      WHILE druckPumpe LT druckTank REPEAT
+  	    	  AFTER 0.1 SEC RESUME;
+  	  	  druckPumpe = lese_druck1;
+  	          druckTank = lese_druck2;
+    	      END;
+              schreibe_ventil(1);
+	  FIN;
+      ELSE
+          IF pumpen_noetig EQ '0'B1 THEN
+              schreibe_ventil(0);
+	  FIN;
+      FIN;
+      AFTER 0.5 SEC RESUME;
+  END;
+END;
+
+
+! Task Druck überwachen
+! Wir wollen die Pumpe starten, wenn der Fuellstand unter 20% faellt 
+! Und sie stoppen, wenn der Fuellstand ueber 95% ist
+ueberwache_druck_speicher: TASK;
+  DCL druck_speicher FLOAT(23);
+  DCL druck_min FLOAT(23) INIT (3924);
+  DCL druck_max FLOAT(23) INIT (18640);
+  DCL turbo_bis_druck FLOAT(23) INIT (9810);
+
+  WHILE sim_laeuft REPEAT
+    druck_speicher = lese_druck2;
+    IF druck_speicher LE druck_min THEN
+        pumpen_noetig=('1'B1);
+	! loggeAktionWert('Achtung! Druck im Tank unter Minimum gefallen, ist jetzt: ', ENTIER druck_speicher);
+    FIN;
+    IF druck_speicher GE druck_max THEN
+        pumpen_noetig=('0'B1);
+	! loggeAktionWert('Achtung! Druck im Tank ueber Maximum gestiegen, ist jetzt: ', ENTIER druck_speicher);
+    FIN;
+    IF druck_speicher GE turbo_bis_druck THEN
+        turbo_noetig=('0'B1);
+    ELSE
+        turbo_noetig=('1'B1);
+    FIN;
+
+AFTER 1 SEC RESUME;
+  END;
+END;
+
+
+! Task Schwimmschalter überwachen
+! Fehlerbehandlung: evtl vergleich mit Druck2, und warnen, wenn Konflikt?
+ueberwache_schwimmschalter: TASK;
+  DCL schwimmerStatus BIT(1);
+  OPEN schwimmerschalter;
+  WHILE sim_laeuft REPEAT
+    schwimmerStatus = lese_schwimmerschalter;
+    IF schwimmerStatus THEN
+        pumpen_noetig=('0'B1);
+        loggeAktionWert('Achtung! Nicht mehr pumpen, Schwimmschalter-Status: ', TOFIXED schwimmerStatus);
+    FIN;       
+    AFTER 1 SEC RESUME;
+  END;
+  CLOSE schwimmerschalter;
+END;
+
+
+
+MODEND;
+
