@@ -186,6 +186,7 @@ DCL status_schwimmerschalter BIT(1);
 
 OPEN terminal;
 PUT 'Testprogramm für alle DATIONS' TO terminal BY A, SKIP;
+CLOSE terminal;
 
 ! hier die einzelnen Tasks und Funktionen aufrufen ...
 
@@ -194,8 +195,8 @@ OPEN schwimmerschalter;
 AFTER 5 SEC RESUME;
 
 ventil_status = lese_ventil;
-ventil_befehl = 1
-schreibe_ventil(ventil_befehl)
+ventil_befehl = 1;
+schreibe_ventil(ventil_befehl);
 
 ALL 1 SEC DURING 30 SEC ACTIVATE ueberwache_druck_speicher;
 
@@ -207,9 +208,9 @@ schwimmerStatus = lese_schwimmerschalter;
 
 AFTER 40 SEC RESUME; ! Benötigt, da sonst das Terminal zu früh geschlossen wird.
 
+OPEN terminal;
 PUT 'Ende des Main Tasks' TO terminal BY A, SKIP;
 CLOSE schwimmerschalter;
-!CLOSE ventil;
 CLOSE terminal;
 END;
 
